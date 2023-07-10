@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  ros2_cuda_pytorch:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: ros2_cuda_pytorch
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    command: bash -c ". /opt/ros/foxy/setup.sh && . install/setup.sh && nvidia-smi"
