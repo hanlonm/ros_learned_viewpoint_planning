@@ -25,7 +25,6 @@ RUN rosdep init && \
 
 # install python stuff
 COPY requirements.txt /workspace/requirements.txt
-COPY setup.sh /workspace/setup.sh
 RUN apt update && apt install python3-pip -y
 RUN pip install -r /workspace/requirements.txt
 
