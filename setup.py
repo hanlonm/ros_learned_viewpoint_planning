@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('lib/' + package_name, [package_name+'/viewpoint_planner.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,7 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'viewpoint_planner = learned_viewpoint_planning.viewpoint_planner:main'
+            'viewpoint_planner = learned_viewpoint_planning.viewpoint_planner_node:main'
         ],
     },
 )

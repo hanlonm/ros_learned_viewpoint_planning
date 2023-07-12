@@ -27,6 +27,7 @@ RUN rosdep init && \
 COPY requirements.txt /workspace/requirements.txt
 RUN apt update && apt install python3-pip -y
 RUN pip install -r /workspace/requirements.txt
+RUN pip install pyembree
 
 ENV ROS2_WS /workspace/ros2_ws
 RUN mkdir -p $ROS2_WS/src

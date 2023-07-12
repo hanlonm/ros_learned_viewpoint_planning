@@ -6,6 +6,7 @@ services:
     #   context: .
     #   dockerfile: Dockerfile
     image: ros2_cuda_pytorch
+    container_name: dev_viewpoint_planner
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
