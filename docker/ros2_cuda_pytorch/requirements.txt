@@ -17,6 +17,8 @@ lightning
 kaleido
 trimesh
 pyembree
+empy
+lark
 
 torch>=1.1
 torchvision>=0.3

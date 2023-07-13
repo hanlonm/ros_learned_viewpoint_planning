@@ -23,13 +23,13 @@ DEG_TO_RAD = np.pi / 180
 
 
 class PlannerModes(Enum):
-    MLP_CLF = 1
-    MLP_REG = 2
-    TRF_CLF = 3
-    ANGLE_CRIT = 4
-    MAX_CRIT = 5
-    FISHER_INFO = 6
-    RANDOM = 7
+    MLP_CLF = "mlp_clf"
+    MLP_REG = "mlp_reg"
+    TRF_CLF = "trf_clf"
+    ANGLE_CRIT = "angle_crit"
+    MAX_CRIT = "max_crit"
+    FISHER_INFO = "fisher_info"
+    RANDOM = "random"
 
 
 class ViewpointPlanner:
