@@ -262,7 +262,7 @@ class ViewpointPlanner:
             else:
                 visible_points = viewpoint.visible_points(
                     point_cloud=self.pcd_points_hom.copy(), clip_dist=5.0)
-
+            print(visible_points.shape[0])
             if visible_points.shape[0] > max_seen_landmarks:
                 max_seen_landmarks = visible_points.shape[0]
                 best_viewpoint = viewpoint

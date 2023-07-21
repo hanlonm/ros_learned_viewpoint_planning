@@ -24,13 +24,14 @@ class ViewpointPlanningNode(Node):
         super().__init__("viewpoint_planner")
         print('Hi from the viewpoint planner.')
 
-        self.declare_parameter("environment", "00195")
-        environment = self.get_parameter(
-            'environment').get_parameter_value().string_value
-
-        self.declare_parameter("home_directory", "/workspace")
+        self.declare_parameter("home_directory", "/home")
         home_directory = self.get_parameter(
             'home_directory').get_parameter_value().string_value
+
+        self.declare_parameter("map_name", "map_00195")
+        map_name = self.get_parameter(
+            'map_name').get_parameter_value().string_value
+        environment = map_name.split(sep="_")[-1]
 
         self.declare_parameter(
             "cam_string", "PINHOLE 1280 720 609.5238037109375 610.1694946289062 640 360")
@@ -38,14 +39,14 @@ class ViewpointPlanningNode(Node):
             'cam_string').get_parameter_value().string_value
 
         self.declare_parameter(
-            "mode_string", "mlp_clf")
+            "mode_string", "trf_clf")
         mode_string = self.get_parameter(
             'mode_string').get_parameter_value().string_value
 
         self.declare_parameter(
-            "planning_service_topic", "planning_service_topic")
-        planning_service_name = self.get_parameter(
-            'planning_service_topic').get_parameter_value().string_value
+            "planning_topic_name", "planning_poses")
+        planning_topic_name = self.get_parameter(
+            'planning_topic_name').get_parameter_value().string_value
 
         self.declare_parameter("occlusion", False)
         occlusion = self.get_parameter(
@@ -55,33 +56,33 @@ class ViewpointPlanningNode(Node):
         num_viewpoint_samples = self.get_parameter(
             'num_viewpoint_samples').get_parameter_value().integer_value
 
-        self.plan_poses_srv = self.create_service(
-            ViewpointPlanningPoses,
-            planning_service_name,
-            self.plan_poses_callback
-        )
+        # self.plan_poses_srv = self.create_service(
+        #     ViewpointPlanningPoses,
+        #     planning_service_name,
+        #     self.plan_poses_callback
+        # )
+
+        self.plan_poses_sub = self.create_subscription(
+            PoseArray, planning_topic_name, self.plan_poses_callback, 10)
+        self.result_pose_publisher = self.create_publisher(
+            PoseArray, 'viewpoint_poses', 10)
 
         home_dir = Path(home_directory)
         environment_data = home_dir / \
             ('viewpoint_planning/data/' + environment)
         model_dir = home_dir / "viewpoint_planning/data/models"
 
-        T_map_world = pt.transform_from(
-            np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
-            np.array([0, 0, 0.0]))
-
         _, c_width, c_height, cfx, cfy, cx, cy = cam_string.split()
-        camera = Camera(width=c_width,
-                        height=c_height,
-                        fx=cfx,
-                        fy=cfy,
-                        cx=cx,
-                        cy=cy)
+        camera = Camera(width=int(c_width),
+                        height=int(c_height),
+                        fx=float(cfx),
+                        fy=float(cfy),
+                        cx=float(cx),
+                        cy=float(cy))
 
         reconstruction_dir = str(
             home_dir
-        ) + "/Hierarchical-Localization/outputs/{}/reconstruction".format(
-            environment)
+        ) + f"/Hierarchical-Localization/outputs/{environment}/reconstruction"
 
         reconstruction = pycolmap.Reconstruction(reconstruction_dir)
         scene: trimesh.Trimesh = trimesh.load(
@@ -127,67 +128,71 @@ class ViewpointPlanningNode(Node):
         #     test_list.append(pt.random_transform())
         # print(self.planner.plan_viewpoints(test_list))
 
-    def plan_poses_callback(self, request, response):
+    def plan_poses_callback(self, msg):
         # Convert each pose in the received request to a 4x4 transformation matrix
+
+        T_cam_base_orig = np.array(
+            [[0.0, -1.0, 0.0, 0.0],
+             [0.0, 0.0, -1.0, 0.0],
+             [1.0, 0.0, 0.0, 0.0],
+             [0.0, 0.0, 0.0, 1.0]])
         planning_poses = []
-        for pose in request.poses.poses:
+        for pose in msg.poses:
+
             translation = np.array([
-                pose.position.x,
-                pose.position.y,
-                pose.position.z
+                -pose.position.x,
+                -pose.position.y,
+                -pose.position.z
             ])
             rotation = np.array([
+                pose.orientation.w,
                 pose.orientation.x,
                 pose.orientation.y,
                 pose.orientation.z,
-                pose.orientation.w
+
             ])
-            transformation_matrix = self.compose_transformation(
-                translation, rotation)
+            pq = np.concatenate([translation, rotation])
+            transformation_matrix = pt.transform_from_pq(pq)
             planning_poses.append(transformation_matrix)
 
         viewpoint_dict = self.planner.plan_viewpoints(planning_poses)
 
         viewpoint_poses = []
         for result in viewpoint_dict.keys():
-            transformation_matrix = viewpoint_dict[result]["T_cam_base"]
-            viewpoint_poses.append(self.transform_to_pose(transformation_matrix))
+            T_cam_map = viewpoint_dict[result]["T_cam_map"]
+            # T_cam_base = viewpoint_dict[result]["T_cam_base"]
 
+            T_cam_base = pt.transform_from(
+                np.array([[0.0, -1.0, 0.0], [0.0, 0.0, -1.0], [1.0, 0.0,
+                                                               0.0]]),
+                np.array([0, 0.0, 0.0]))
+            T_base_cam = np.linalg.inv(T_cam_base)
+            T_map_base = np.linalg.inv(T_base_cam @ T_cam_map)
+            T_base_map = np.linalg.inv(T_map_base)
 
-        # Populate the response with the transformed poses as a PoseArray
-        response.planned_viewpoints = self.create_pose_array(viewpoint_poses)
+            # T_base_cam = np.linalg.inv(T_cam_base)
+            # T_base_cam_orig = pt.invert_transform(T_cam_base_orig)
 
-        return response
+            # # T_base_map = pt.invert_transform(T_cam_base) @ T_cam_map
+            # T_base_map = T_base_cam_orig @ T_cam_map
+            print(T_map_base)
+            viewpoint_poses.append(self.transform_to_pose(T_map_base))
 
-    def compose_transformation(self, translation, rotation):
-        transformation_matrix = np.eye(4)
-        transformation_matrix[:3, 3] = translation
+        result_pose_array = self.create_pose_array(viewpoint_poses)
 
-        qx, qy, qz, qw = rotation
-        rotation_matrix = np.array([
-            [1 - 2 * (qy ** 2 + qz ** 2), 2 * (qx * qy - qz * qw),
-             2 * (qx * qz + qy * qw)],
-            [2 * (qx * qy + qz * qw), 1 - 2 *
-             (qx ** 2 + qz ** 2), 2 * (qy * qz - qx * qw)],
-            [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw),
-             1 - 2 * (qx ** 2 + qy ** 2)]
-        ])
-        transformation_matrix[:3, :3] = rotation_matrix
-
-        return transformation_matrix
+        self.result_pose_publisher.publish(result_pose_array)
 
     def transform_to_pose(self, transformation_matrix):
+        pq = pt.pq_from_transform(transformation_matrix)
         pose = Pose()
-        pose.position.x = transformation_matrix[0, 3]
-        pose.position.y = transformation_matrix[1, 3]
-        pose.position.z = transformation_matrix[2, 3]
-        rotation_matrix = transformation_matrix[:3, :3]
-        rotation_quaternion = self.rotation_matrix_to_quaternion(
-            rotation_matrix)
-        pose.orientation.x = rotation_quaternion[0]
-        pose.orientation.y = rotation_quaternion[1]
-        pose.orientation.z = rotation_quaternion[2]
-        pose.orientation.w = rotation_quaternion[3]
+        pose.position.x = pq[0]
+        pose.position.y = pq[1]
+        pose.position.z = pq[2]
+
+        pose.orientation.x = pq[4]
+        pose.orientation.y = pq[5]
+        pose.orientation.z = pq[6]
+        pose.orientation.w = pq[3]
         return pose
 
     def rotation_matrix_to_quaternion(self, rotation_matrix):
@@ -200,7 +205,7 @@ class ViewpointPlanningNode(Node):
 
     def create_pose_array(self, poses):
         pose_array = PoseArray()
-        pose_array.header.frame_id = 'base'  # Set the frame ID for the PoseArray
+        pose_array.header.frame_id = 'map'  # Set the frame ID for the PoseArray
         pose_array.poses = poses
         return pose_array
 

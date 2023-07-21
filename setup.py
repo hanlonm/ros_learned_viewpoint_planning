@@ -1,4 +1,6 @@
 from setuptools import setup
+import os
+from glob import glob
 
 package_name = 'learned_viewpoint_planning'
 
@@ -11,6 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('lib/' + package_name, [package_name+'/viewpoint_planner.py']),
+        (os.path.join('share', package_name), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -21,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'viewpoint_planner = learned_viewpoint_planning.viewpoint_planner_node:main'
+            'viewpoint_planner = learned_viewpoint_planning.viewpoint_planner_node:main',
+            'pose_publisher = learned_viewpoint_planning.pose_publisher_node:main'
         ],
     },
 )

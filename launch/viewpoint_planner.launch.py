@@ -5,12 +5,12 @@ import launch_ros.actions
 def generate_launch_description():
     ld = launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument(
-            name='environment',
-            default_value='00195'
-        ),
-        launch.actions.DeclareLaunchArgument(
             name='home_directory',
             default_value='/workspace'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='map_name',
+            default_value="map_00195"
         ),
         launch.actions.DeclareLaunchArgument(
             name='cam_string',
@@ -18,11 +18,12 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='mode_string',
-            default_value='mlp_clf'
+            default_value='angle_crit',
+            choices=["mlp_clf", "mlp_reg", "trf_clf", "angle_crit", "max_crit", "fisher_info", "random"]
         ),
         launch.actions.DeclareLaunchArgument(
             name='occlusion',
-            default_value='False'
+            default_value='True'
         ),
         launch.actions.DeclareLaunchArgument(
             name='num_viewpoint_samples',
@@ -35,16 +36,16 @@ def generate_launch_description():
             emulate_tty=True,
             parameters=[
                 {
-                    'environment': launch.substitutions.LaunchConfiguration('environment')
+                    'home_directory': launch.substitutions.LaunchConfiguration('home_directory')
                 },
                 {
-                    'home_directory': launch.substitutions.LaunchConfiguration('home_directory')
+                    'map_name': launch.substitutions.LaunchConfiguration('map_name')
                 },
                 {
                     'cam_string': launch.substitutions.LaunchConfiguration('cam_string')
                 },
                 {
-                    'mode_string': launch.substitutions.LaunchConfiguration('cam_string')
+                    'mode_string': launch.substitutions.LaunchConfiguration('mode_string')
                 },
                 {
                     'occlusion': launch.substitutions.LaunchConfiguration('occlusion')
@@ -53,7 +54,14 @@ def generate_launch_description():
                     'num_viewpoint_samples': launch.substitutions.LaunchConfiguration('num_viewpoint_samples')
                 },
             ]
+        ),
+        launch_ros.actions.Node(
+            package='learned_viewpoint_planning',
+            executable='pose_publisher',
+            output='screen',
+            emulate_tty=True,
         )
+        
     ])
     return ld
 

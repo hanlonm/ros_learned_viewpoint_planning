@@ -1,0 +1,28 @@
+version: '3'
+services:
+  viewpoint_planner:
+    image: viewpoint_planning:0.0.1
+    container_name: viewpoint_planner
+    network_mode: "host"
+    ipc: "host"
+    pid: "host"
+    stdin_open: true
+    tty: true
+    runtime: nvidia
+    environment:
+      - SDL_VIDEODRIVER=x11
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - "ROS_DOMAIN_ID=42"
+      - "FASTRTPS_DEFAULT_PROFILES_FILE=/workspace/networking/fastrtps-profile.xml"
+      - "PYTHONPATH=/workspace/viewpoint_planning:/workspace/viewpoint_planning/viewpoint_planning:/workspace/viewpoint_learning:${PYTHONPATH}"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /etc/localtime:/etc/localtime
+      - ../..:/workspace/ros2_ws/src
+      - ${HOME}/mt-matthew:/workspace/viewpoint_planning
+      - ${HOME}/viewpoint-learning:/workspace/viewpoint_learning
+      - ${HOME}/Hierarchical-Localization:/workspace/Hierarchical-Localization
+      - ./networking:/workspace/networking
+
+    command: bash -c ". /opt/ros/foxy/setup.sh && colcon build && . install/setup.sh && nvidia-smi && ros2 launch learned_viewpoint_planning viewpoint_planner.launch.py"
