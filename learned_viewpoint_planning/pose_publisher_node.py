@@ -22,16 +22,28 @@ class PoseArrayPublisher(Node):
         pose1.position.x = -8.0
         pose1.position.y = -8.0
         pose1.position.z = 0.7
+        pose1.orientation.w = 1.0
+        pose1.orientation.x = 0.0
+        pose1.orientation.y = 0.0
+        pose1.orientation.z = 0.0
 
         pose2 = Pose()
         pose2.position.x = -8.0
         pose2.position.y = -9.0
         pose2.position.z = 0.7
+        pose2.orientation.w = 1.0
+        pose2.orientation.x = 0.0
+        pose2.orientation.y = 0.0
+        pose2.orientation.z = 0.0
 
         pose3 = Pose()
         pose3.position.x = -8.0
         pose3.position.y = -10.0
         pose3.position.z = 0.7
+        pose3.orientation.w = 1.0
+        pose3.orientation.x = 0.0
+        pose3.orientation.y = 0.0
+        pose3.orientation.z = 0.0
 
         self.pose_array_msg_.header.stamp = self.get_clock().now().to_msg()
         self.pose_array_msg_.header.frame_id = 'map'

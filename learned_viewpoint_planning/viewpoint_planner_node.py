@@ -55,17 +55,15 @@ class ViewpointPlanningNode(Node):
         self.declare_parameter("num_viewpoint_samples", 100)
         num_viewpoint_samples = self.get_parameter(
             'num_viewpoint_samples').get_parameter_value().integer_value
-
-        # self.plan_poses_srv = self.create_service(
-        #     ViewpointPlanningPoses,
-        #     planning_service_name,
-        #     self.plan_poses_callback
-        # )
-
+        
         self.plan_poses_sub = self.create_subscription(
             PoseArray, planning_topic_name, self.plan_poses_callback, 10)
-        self.result_pose_publisher = self.create_publisher(
-            PoseArray, 'viewpoint_poses', 10)
+        
+        self.result_pose_publisher_map = self.create_publisher(
+            PoseArray, 'viewpoint_poses_map', 10)
+        
+        self.result_pose_publisher_base = self.create_publisher(
+            PoseArray, 'viewpoint_poses_base', 10)
 
         home_dir = Path(home_directory)
         environment_data = home_dir / \
@@ -123,10 +121,12 @@ class ViewpointPlanningNode(Node):
             min_max_viewing_angles=min_max_viewing_angles,
             min_max_viewing_distances=min_max_viewing_distances)
 
-        # test_list = []
-        # for i in range(10):
-        #     test_list.append(pt.random_transform())
-        # print(self.planner.plan_viewpoints(test_list))
+        self.T_zforward_zup = pt.transform_from(
+            np.array([[0.0, -1.0, 0.0], [0.0, 0.0, -1.0], [1.0, 0.0,
+                                                           0.0]]),
+            np.array([0, 0.0, 0.0]))
+        self.T_zup_zforward = np.linalg.inv(self.T_zforward_zup)
+
 
     def plan_poses_callback(self, msg):
         # Convert each pose in the received request to a 4x4 transformation matrix
@@ -157,30 +157,23 @@ class ViewpointPlanningNode(Node):
 
         viewpoint_dict = self.planner.plan_viewpoints(planning_poses)
 
-        viewpoint_poses = []
+        viewpoint_poses_map = []
+        viewpoint_poses_base = []
         for result in viewpoint_dict.keys():
             T_cam_map = viewpoint_dict[result]["T_cam_map"]
-            # T_cam_base = viewpoint_dict[result]["T_cam_base"]
+            T_map_cam = np.linalg.inv(self.T_zup_zforward @ T_cam_map)
 
-            T_cam_base = pt.transform_from(
-                np.array([[0.0, -1.0, 0.0], [0.0, 0.0, -1.0], [1.0, 0.0,
-                                                               0.0]]),
-                np.array([0, 0.0, 0.0]))
-            T_base_cam = np.linalg.inv(T_cam_base)
-            T_map_base = np.linalg.inv(T_base_cam @ T_cam_map)
-            T_base_map = np.linalg.inv(T_map_base)
+            T_cam_base = viewpoint_dict[result]["T_cam_base"]
+            T_base_cam = np.linalg.inv(self.T_zup_zforward @ T_cam_base)
 
-            # T_base_cam = np.linalg.inv(T_cam_base)
-            # T_base_cam_orig = pt.invert_transform(T_cam_base_orig)
+            viewpoint_poses_map.append(self.transform_to_pose(T_map_cam))
+            viewpoint_poses_base.append(self.transform_to_pose(T_base_cam))
 
-            # # T_base_map = pt.invert_transform(T_cam_base) @ T_cam_map
-            # T_base_map = T_base_cam_orig @ T_cam_map
-            print(T_map_base)
-            viewpoint_poses.append(self.transform_to_pose(T_map_base))
+        result_pose_array_map = self.create_pose_array(viewpoint_poses_map)
+        result_pose_array_base = self.create_pose_array(viewpoint_poses_base)
 
-        result_pose_array = self.create_pose_array(viewpoint_poses)
-
-        self.result_pose_publisher.publish(result_pose_array)
+        self.result_pose_publisher_map.publish(result_pose_array_map)
+        self.result_pose_publisher_base.publish(result_pose_array_base)
 
     def transform_to_pose(self, transformation_matrix):
         pq = pt.pq_from_transform(transformation_matrix)
