@@ -26,10 +26,10 @@ class ViewpointPlanningNode(Node):
         home_directory = self.get_parameter(
             'home_directory').get_parameter_value().string_value
 
-        self.declare_parameter("map_name", "map_00195")
+        self.declare_parameter("map_name", "map-00195")
         map_name = self.get_parameter(
             'map_name').get_parameter_value().string_value
-        environment = map_name.split(sep="_")[-1]
+        environment = map_name.split(sep="-")[-1]
 
         self.declare_parameter(
             "cam_string", "PINHOLE 1280 720 609.5238037109375 610.1694946289062 640 360")
