@@ -2,8 +2,6 @@ import rclpy
 from rclpy.context import Context
 from rclpy.node import Node
 from geometry_msgs.msg import PoseArray, Pose
-from viewpoint_planning_interfaces.srv import ViewpointPlanningPoses
-
 from typing import List
 from pytransform3d import transformations as pt
 import numpy as np
