@@ -10,7 +10,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='map_name',
-            default_value="map_00195"
+            default_value="map-DLAB_3"
         ),
         launch.actions.DeclareLaunchArgument(
             name='cam_string',
@@ -23,7 +23,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='occlusion',
-            default_value='True'
+            default_value='False'
         ),
         launch.actions.DeclareLaunchArgument(
             name='num_viewpoint_samples',
@@ -58,6 +58,12 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='learned_viewpoint_planning',
             executable='pose_publisher',
+            output='screen',
+            emulate_tty=True,
+        ),
+        launch_ros.actions.Node(
+            package='learned_viewpoint_planning',
+            executable='spot_viewpoint_planning',
             output='screen',
             emulate_tty=True,
         )

@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.context import Context
 from rclpy.node import Node
-from geometry_msgs.msg import PoseArray, Pose
+from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 from typing import List
 from pytransform3d import transformations as pt
 import numpy as np
@@ -57,6 +57,10 @@ class ViewpointPlanningNode(Node):
         self.plan_poses_sub = self.create_subscription(
             PoseArray, planning_topic_name, self.plan_poses_callback, 10)
         
+        self.plan_single_pose_sub = self.create_subscription(Pose, "plan_viewpoint", self.plan_viewpoint_callback, 10)
+        self.viewpoint_result_map_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_map", 10)
+        self.viewpoint_result_loc_cam_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_loc_cam", 10)
+        
         self.result_pose_publisher_map = self.create_publisher(
             PoseArray, 'viewpoint_poses_map', 10)
         
@@ -81,8 +85,12 @@ class ViewpointPlanningNode(Node):
         ) + f"/Hierarchical-Localization/outputs/{environment}/reconstruction"
 
         reconstruction = pycolmap.Reconstruction(reconstruction_dir)
-        scene: trimesh.Trimesh = trimesh.load(
-            str(environment_data) + f"/{environment}_mesh.ply")
+        
+        if occlusion:
+            scene: trimesh.Trimesh = trimesh.load(
+                str(environment_data) + f"/{environment}_mesh.ply")
+        else:
+            scene = None
 
         file = open(environment_data / "pose_dict.pkl", 'rb')
         pose_dict = pickle.load(file)
@@ -125,6 +133,39 @@ class ViewpointPlanningNode(Node):
             np.array([0, 0.0, 0.0]))
         self.T_zup_zforward = np.linalg.inv(self.T_zforward_zup)
 
+    def plan_viewpoint_callback(self, msg: Pose):
+        translation = np.array([
+            msg.position.x,
+            msg.position.y,
+            msg.position.z
+        ])
+        rotation = np.array([
+            msg.orientation.w,
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+        ])
+
+        pq = np.concatenate([translation, rotation])
+        transformation_matrix = pt.transform_from_pq(pq)
+        planning_poses = [transformation_matrix]
+
+        viewpoint_dict = self.planner.plan_viewpoints(planning_poses)
+
+        viewpoint_poses_map = []
+        viewpoint_poses_base = []
+
+        for result in viewpoint_dict.keys():
+            T_cam_map = viewpoint_dict[result]["T_cam_map"]
+            T_map_cam = np.linalg.inv(self.T_zup_zforward @ T_cam_map)
+
+            T_cam_base = viewpoint_dict[result]["T_cam_base"]
+            T_base_cam = np.linalg.inv(self.T_zup_zforward @ T_cam_base)
+
+            viewpoint_poses_map.append(self.transform_to_pose_stamped(T_map_cam, "map"))
+            viewpoint_poses_base.append(self.transform_to_pose_stamped(T_base_cam, "loc_cam"))
+        self.viewpoint_result_map_pub.publish(viewpoint_poses_map[0])
+        self.viewpoint_result_loc_cam_pub.publish(viewpoint_poses_base[0])
 
     def plan_poses_callback(self, msg):
         # Convert each pose in the received request to a 4x4 transformation matrix
@@ -176,6 +217,21 @@ class ViewpointPlanningNode(Node):
     def transform_to_pose(self, transformation_matrix):
         pq = pt.pq_from_transform(transformation_matrix)
         pose = Pose()
+        pose.position.x = pq[0]
+        pose.position.y = pq[1]
+        pose.position.z = pq[2]
+
+        pose.orientation.x = pq[4]
+        pose.orientation.y = pq[5]
+        pose.orientation.z = pq[6]
+        pose.orientation.w = pq[3]
+        return pose
+    
+    def transform_to_pose_stamped(self, transformation_matrix, frame):
+        pq = pt.pq_from_transform(transformation_matrix)
+        pose = PoseStamped()
+        pose.header.frame_id = frame
+        pose.header.stamp = self.get_clock().now().to_msg()
         pose.position.x = pq[0]
         pose.position.y = pq[1]
         pose.position.z = pq[2]

@@ -19,10 +19,10 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /etc/localtime:/etc/localtime
-      - ../..:/workspace/ros2_ws/src
-      - ${HOME}/mt-matthew:/workspace/viewpoint_planning
-      - ${HOME}/viewpoint-learning:/workspace/viewpoint_learning
-      - ${HOME}/Hierarchical-Localization:/workspace/Hierarchical-Localization
+      - ..:/workspace/ros2_ws/src/learned_viepoint_planning
+      - ${BASE_DIR}/mt-matthew:/workspace/viewpoint_planning
+      - ${BASE_DIR}/viewpoint-learning:/workspace/viewpoint_learning
+      - ${BASE_DIR}/Hierarchical-Localization:/workspace/Hierarchical-Localization
       - ./networking:/workspace/networking
 
     command: bash -c ". /opt/ros/foxy/setup.sh && colcon build && . install/setup.sh && nvidia-smi && ros2 launch learned_viewpoint_planning viewpoint_planner.launch.py"
