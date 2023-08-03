@@ -5,7 +5,8 @@ from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 from typing import List
 from pytransform3d import transformations as pt
 import numpy as np
-from viewpoint_planning_interfaces.srv import HandPose
+# from viewpoint_planning_interfaces.srv import HandPose
+from spot_msgs.srv import HandPose
 from std_srvs.srv import Empty
 
 
@@ -25,8 +26,8 @@ class SpotViewpointPlanningNode(Node):
     
 
     def test_hand_move(self):
-        request = HandPose.Request
-        request.duration = 10.0
+        request = HandPose.Request()
+        request.duration = 5.0
         request.frame = "body"
         pose = Pose()
         pose.orientation.x = 0.0
@@ -38,8 +39,7 @@ class SpotViewpointPlanningNode(Node):
         pose.position.z = 0.2
         request.pose_point: Pose = pose
 
-        future = self.hand_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
+        future = self.hand_client.call(request)
     
     def test_arm_cb(self, req: Empty.Request):
         self.test_hand_move()

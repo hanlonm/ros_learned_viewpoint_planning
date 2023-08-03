@@ -20,7 +20,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /etc/localtime:/etc/localtime
       - ..:/workspace/ros2_ws/src/learned_viepoint_planning
-      - ../../viewpoint_planning_interfaces:/workspace/ros2_ws/src/viewpoint_planning_interfaces
+      - ../../spot_msgs:/workspace/ros2_ws/src/spot_msgs
       - ${BASE_DIR}/mt-matthew:/workspace/viewpoint_planning
       - ${BASE_DIR}/viewpoint-learning:/workspace/viewpoint_learning
       - ${BASE_DIR}/Hierarchical-Localization:/workspace/Hierarchical-Localization
