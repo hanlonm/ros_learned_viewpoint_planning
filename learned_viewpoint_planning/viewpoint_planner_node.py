@@ -1,9 +1,10 @@
 import rclpy
 from rclpy.context import Context
 from rclpy.node import Node
-from geometry_msgs.msg import PoseArray, Pose, PoseStamped
+from geometry_msgs.msg import PoseArray, Pose, PoseStamped, TransformStamped
 from typing import List
 from pytransform3d import transformations as pt
+from pytransform3d import rotations as pr
 import numpy as np
 import pycolmap
 import trimesh
@@ -57,7 +58,7 @@ class ViewpointPlanningNode(Node):
         self.plan_poses_sub = self.create_subscription(
             PoseArray, planning_topic_name, self.plan_poses_callback, 10)
         
-        self.plan_single_pose_sub = self.create_subscription(Pose, "plan_viewpoint", self.plan_viewpoint_callback, 10)
+        self.plan_single_pose_sub = self.create_subscription(TransformStamped, "plan_viewpoint", self.plan_viewpoint_callback, 10)
         self.viewpoint_result_map_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_map", 10)
         self.viewpoint_result_loc_cam_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_loc_cam", 10)
         
@@ -133,18 +134,19 @@ class ViewpointPlanningNode(Node):
             np.array([0, 0.0, 0.0]))
         self.T_zup_zforward = np.linalg.inv(self.T_zforward_zup)
 
-    def plan_viewpoint_callback(self, msg: Pose):
+    def plan_viewpoint_callback(self, msg: TransformStamped):
         translation = np.array([
-            msg.position.x,
-            msg.position.y,
-            msg.position.z
+            msg.transform.translation.x,
+            msg.transform.translation.y,
+            msg.transform.translation.z
         ])
         rotation = np.array([
-            msg.orientation.w,
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
+            msg.transform.rotation.w,
+            msg.transform.rotation.x,
+            msg.transform.rotation.y,
+            msg.transform.rotation.z,
         ])
+        print(translation)
 
         pq = np.concatenate([translation, rotation])
         transformation_matrix = pt.transform_from_pq(pq)
@@ -164,6 +166,8 @@ class ViewpointPlanningNode(Node):
 
             viewpoint_poses_map.append(self.transform_to_pose_stamped(T_map_cam, "map"))
             viewpoint_poses_base.append(self.transform_to_pose_stamped(T_base_cam, "loc_cam"))
+            # print(pt.pq_from_transform(T_base_cam))
+            # print(pr.euler_from_quaternion(pt.pq_from_transform(T_base_cam)[3:], 2,1,0, False))
         self.viewpoint_result_map_pub.publish(viewpoint_poses_map[0])
         self.viewpoint_result_loc_cam_pub.publish(viewpoint_poses_base[0])
 
@@ -232,14 +236,14 @@ class ViewpointPlanningNode(Node):
         pose = PoseStamped()
         pose.header.frame_id = frame
         pose.header.stamp = self.get_clock().now().to_msg()
-        pose.position.x = pq[0]
-        pose.position.y = pq[1]
-        pose.position.z = pq[2]
+        pose.pose.position.x = pq[0]
+        pose.pose.position.y = pq[1]
+        pose.pose.position.z = pq[2]
 
-        pose.orientation.x = pq[4]
-        pose.orientation.y = pq[5]
-        pose.orientation.z = pq[6]
-        pose.orientation.w = pq[3]
+        pose.pose.orientation.x = pq[4]
+        pose.pose.orientation.y = pq[5]
+        pose.pose.orientation.z = pq[6]
+        pose.pose.orientation.w = pq[3]
         return pose
 
     def rotation_matrix_to_quaternion(self, rotation_matrix):

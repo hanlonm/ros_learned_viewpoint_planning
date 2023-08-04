@@ -18,7 +18,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='mode_string',
-            default_value='angle_crit',
+            default_value='max_crit',
             choices=["mlp_clf", "mlp_reg", "trf_clf", "angle_crit", "max_crit", "fisher_info", "random"]
         ),
         launch.actions.DeclareLaunchArgument(
