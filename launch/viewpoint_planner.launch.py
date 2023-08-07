@@ -55,18 +55,6 @@ def generate_launch_description():
                 },
             ]
         ),
-        launch_ros.actions.Node(
-            package='learned_viewpoint_planning',
-            executable='pose_publisher',
-            output='screen',
-            emulate_tty=True,
-        ),
-        launch_ros.actions.Node(
-            package='learned_viewpoint_planning',
-            executable='spot_viewpoint_planning',
-            output='screen',
-            emulate_tty=True,
-        )
         
     ])
     return ld
