@@ -165,7 +165,7 @@ class ViewpointPlanningNode(Node):
             T_base_cam = np.linalg.inv(self.T_zup_zforward @ T_cam_base)
 
             viewpoint_poses_map.append(self.transform_to_pose_stamped(T_map_cam, "map"))
-            viewpoint_poses_base.append(self.transform_to_pose_stamped(T_base_cam, "loc_cam"))
+            viewpoint_poses_base.append(self.transform_to_pose_stamped(T_base_cam, "hand"))
             # print(pt.pq_from_transform(T_base_cam))
             # print(pr.euler_from_quaternion(pt.pq_from_transform(T_base_cam)[3:], 2,1,0, False))
         self.viewpoint_result_map_pub.publish(viewpoint_poses_map[0])
