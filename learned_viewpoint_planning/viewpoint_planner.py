@@ -91,8 +91,12 @@ class ViewpointPlanner:
         # determine compute device
         self.device = torch.device(
             'cuda:0' if torch.cuda.is_available() else "cpu")
+        
 
         ### Learned Models ###
+        self.classifier = None
+        self.transformer = None
+        self.regressor = None
         if self.mode == PlannerModes.MLP_CLF:
             if occlusion:
                 self.classifier = ViewpointClassifier.load_from_checkpoint(
@@ -125,9 +129,31 @@ class ViewpointPlanner:
         if self.mode == PlannerModes.TRF_CLF:
             # TODO: add case for occlusion
             self.transformer = PCTViewpointTransformer.load_from_checkpoint(
-                self.model_dir + "/transformer/many_envs/best_test_10-5_16_occ_opt_norm_small_noheat_nodino_noise.ckpt")
+                self.model_dir + "/transformer/10-5_16_occ_opt_norm_small_noheat_nodino/best_test_10-5_16_occ_opt_norm_small_noheat_nodino.ckpt",
+                cam_width=1280, cam_height=720)
             self.transformer.eval()
             self.transformer.to(self.device)
+
+    def change_mode(self, new_mode):
+        self.mode = PlannerModes(new_mode)
+        if self.mode == PlannerModes.TRF_CLF and self.transformer is not None:
+            self.transformer = PCTViewpointTransformer.load_from_checkpoint(
+                self.model_dir + "/transformer/10-5_16_occ_opt_norm_small_noheat_nodino/best_test_10-5_16_occ_opt_norm_small_noheat_nodino.ckpt",
+                cam_width=1280, cam_height=720)
+            self.transformer.eval()
+            self.transformer.to(self.device)
+        if self.mode == PlannerModes.MLP_CLF and self.classifier is not None:
+            if self.occlusion:
+                self.classifier = ViewpointClassifier.load_from_checkpoint(
+                    self.model_dir + "/classifiers/mlp_opt_occ_1-5_32/best_test.ckpt",
+                    input_dim=146)
+            else:
+                self.classifier = ViewpointClassifier.load_from_checkpoint(
+                    self.model_dir +
+                    "/classifiers/230620/all_info/epoch=140-step=126900.ckpt",
+                    input_dim=146)
+            self.classifier.to(self.device)
+            self.classifier.eval()
 
     def plan_viewpoints(self, waypoints: List[np.ndarray]) -> dict:
         """
@@ -546,6 +572,7 @@ class ViewpointPlanner:
                 rc_scene=self.rc_scene,
                 dino_dim=3)
             
+            token = token[:,:9]
             token = torch.from_numpy(token.astype(np.float32)).to(
                 self.device).unsqueeze(0)
             score = self.transformer(token)

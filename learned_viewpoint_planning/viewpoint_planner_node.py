@@ -2,6 +2,7 @@ import rclpy
 from rclpy.context import Context
 from rclpy.node import Node
 from geometry_msgs.msg import PoseArray, Pose, PoseStamped, TransformStamped
+from std_msgs.msg import String
 from typing import List
 from pytransform3d import transformations as pt
 from pytransform3d import rotations as pr
@@ -61,6 +62,7 @@ class ViewpointPlanningNode(Node):
         self.plan_single_pose_sub = self.create_subscription(TransformStamped, "plan_viewpoint", self.plan_viewpoint_callback, 10)
         self.viewpoint_result_map_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_map", 10)
         self.viewpoint_result_loc_cam_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_loc_cam", 10)
+        self.mode_sub = self.create_subscription(String, "planner_mode", self.planner_mode_callback, 10)
         
         self.result_pose_publisher_map = self.create_publisher(
             PoseArray, 'viewpoint_poses_map', 10)
@@ -217,6 +219,11 @@ class ViewpointPlanningNode(Node):
 
         self.result_pose_publisher_map.publish(result_pose_array_map)
         self.result_pose_publisher_base.publish(result_pose_array_base)
+
+
+    def planner_mode_callback(self, msg: String):
+        self.planner.change_mode(msg.data)
+        print(f"Planner mode changed to {msg.data}")
 
     def transform_to_pose(self, transformation_matrix):
         pq = pt.pq_from_transform(transformation_matrix)
