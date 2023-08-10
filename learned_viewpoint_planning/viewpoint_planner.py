@@ -137,13 +137,13 @@ class ViewpointPlanner:
 
     def change_mode(self, new_mode):
         self.mode = PlannerModes(new_mode)
-        if self.mode == PlannerModes.TRF_CLF and self.transformer is not None:
+        if self.mode == PlannerModes.TRF_CLF and self.transformer is None:
             self.transformer = PCTViewpointTransformer.load_from_checkpoint(
                 self.model_dir + "/transformer/10-5_16_occ_opt_norm_small_noheat_nodino/best_test_10-5_16_occ_opt_norm_small_noheat_nodino.ckpt",
                 cam_width=1280, cam_height=720)
             self.transformer.eval()
             self.transformer.to(self.device)
-        if self.mode == PlannerModes.MLP_CLF and self.classifier is not None:
+        if self.mode == PlannerModes.MLP_CLF and self.classifier is None:
             if self.occlusion:
                 self.classifier = ViewpointClassifier.load_from_checkpoint(
                     self.model_dir + "/classifiers/mlp_opt_occ_1-5_32/best_test.ckpt",
