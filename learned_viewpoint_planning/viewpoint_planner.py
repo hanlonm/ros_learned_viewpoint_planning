@@ -96,7 +96,7 @@ class ViewpointPlanner:
         if self.mode == PlannerModes.MLP_CLF:
             if occlusion:
                 self.classifier = ViewpointClassifier.load_from_checkpoint(
-                    self.model_dir + "/classifiers/230628/best_test.ckpt",
+                    self.model_dir + "/classifiers/mlp_opt_occ_1-5_32/best_test.ckpt",
                     input_dim=146)
             else:
                 self.classifier = ViewpointClassifier.load_from_checkpoint(
@@ -125,7 +125,7 @@ class ViewpointPlanner:
         if self.mode == PlannerModes.TRF_CLF:
             # TODO: add case for occlusion
             self.transformer = PCTViewpointTransformer.load_from_checkpoint(
-                self.model_dir + "/transformer/dino_3_10-5_16/best_test.ckpt")
+                self.model_dir + "/transformer/many_envs/best_test_10-5_16_occ_opt_norm_small_noheat_nodino_noise.ckpt")
             self.transformer.eval()
             self.transformer.to(self.device)
 
