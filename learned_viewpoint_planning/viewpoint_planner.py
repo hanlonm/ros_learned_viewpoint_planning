@@ -51,6 +51,7 @@ class ViewpointPlanner:
         self.mode = mode
         self.occlusion = occlusion
         self.num_samples = num_samples
+        self.max_pitch = 30
 
         ### Map Parameters ###
         # colmap reconstruction
@@ -202,7 +203,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         max_seen_landmarks = 0
         best_viewpoint = None
@@ -236,6 +237,7 @@ class ViewpointPlanner:
                 best_viewpoint = viewpoint
 
         if best_viewpoint is not None:
+            print(f"Found viewpoint with score {max_seen_landmarks}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
@@ -257,7 +259,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         max_seen_landmarks = 0
         best_viewpoint = None
@@ -293,6 +295,7 @@ class ViewpointPlanner:
                 best_viewpoint = viewpoint
 
         if best_viewpoint is not None:
+            print(f"Found viewpoint with score {max_seen_landmarks}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
@@ -314,7 +317,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         max_fisher_info = 0
         best_viewpoint = None
@@ -369,7 +372,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         result_dict = {}
 
@@ -401,7 +404,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         best_viewpoint = None
         viewpoints = []
@@ -451,6 +454,7 @@ class ViewpointPlanner:
         best_viewpoint = viewpoints[best_idx]
 
         if best_viewpoint is not None:
+            print(f"Found viewpoint with score {scores[best_idx]}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
@@ -473,7 +477,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         best_viewpoint = None
         viewpoints = []
@@ -538,7 +542,7 @@ class ViewpointPlanner:
         samples = yaw_pitch_samples(num=self.num_samples,
                                     max_yaw=2 * np.pi,
                                     min_pitch=-10 * DEG_TO_RAD,
-                                    max_pitch=45 * DEG_TO_RAD)
+                                    max_pitch=self.max_pitch * DEG_TO_RAD)
 
         best_viewpoint = None
         max_score = 0
@@ -584,6 +588,7 @@ class ViewpointPlanner:
                 max_score = float(score)
 
         if best_viewpoint is not None:
+            print(f"Found viewpoint with score {score}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
