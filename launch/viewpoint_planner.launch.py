@@ -10,11 +10,11 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='map_name',
-            default_value="map-DLAB_3"
+            default_value="map-DLAB_5"
         ),
         launch.actions.DeclareLaunchArgument(
             name='cam_string',
-            default_value='PINHOLE 1280 720 609.5238037109375 610.1694946289062 640 360'
+            default_value='PINHOLE 640 480 552.0291012161067 552.0291012161067 320 240'
         ),
         launch.actions.DeclareLaunchArgument(
             name='mode_string',
@@ -23,7 +23,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='occlusion',
-            default_value='False'
+            default_value='True'
         ),
         launch.actions.DeclareLaunchArgument(
             name='num_viewpoint_samples',

@@ -230,6 +230,7 @@ class ViewpointPlanner:
                 point_cloud=self.pcd_points_hom.copy(),
                 min_max_viewing_angles=self.min_max_viewing_angles,
                 clip_dist=5.0,
+                rc_scene=self.rc_scene,
                 run_PnP=False)
 
             if visible_points.shape[0] > max_seen_landmarks:
