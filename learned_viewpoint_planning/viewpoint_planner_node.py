@@ -64,6 +64,7 @@ class ViewpointPlanningNode(Node):
         self.viewpoint_result_loc_cam_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_loc_cam", 10)
         self.mode_sub = self.create_subscription(String, "planner_mode", self.planner_mode_callback, 10)
         
+        
         self.result_pose_publisher_map = self.create_publisher(
             PoseArray, 'viewpoint_poses_map', 10)
         
@@ -135,6 +136,16 @@ class ViewpointPlanningNode(Node):
                                                            0.0]]),
             np.array([0, 0.0, 0.0]))
         self.T_zup_zforward = np.linalg.inv(self.T_zforward_zup)
+
+        self.mode_publisher = self.create_publisher(String, 'current_planner_mode', 10)
+        timer_period = 0.5
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = self.planner.mode
+        self.mode_publisher.publish(msg)
+        
 
     def plan_viewpoint_callback(self, msg: TransformStamped):
         translation = np.array([
