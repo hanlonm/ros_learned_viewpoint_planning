@@ -143,7 +143,7 @@ class ViewpointPlanningNode(Node):
 
     def timer_callback(self):
         msg = String()
-        msg.data = PlannerModes(self.planner.mode)
+        msg.data = self.planner.mode.value
         self.mode_publisher.publish(msg)
         
 

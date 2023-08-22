@@ -242,6 +242,7 @@ class ViewpointPlanner:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
+            print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
                 [[0.0, -1.0, 0.0, 0.0],
                  [0.0, 0.0, -1.0, 0.0],
@@ -300,6 +301,7 @@ class ViewpointPlanner:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
+            print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
                 [[0.0, -1.0, 0.0, 0.0],
                  [0.0, 0.0, -1.0, 0.0],
@@ -342,7 +344,7 @@ class ViewpointPlanner:
                                   T_cam_base=T_cam_base)
 
             fisher_info = viewpoint.viewpoint_fisher_information(
-                point_cloud=self.pcd_points_hom,
+                point_cloud=self.pcd_points_hom.copy(),
                 rc_scene=self.rc_scene,
                 clip_dist=5.0)
 
@@ -355,6 +357,7 @@ class ViewpointPlanner:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
+            print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
                 [[0.0, -1.0, 0.0, 0.0],
                  [0.0, 0.0, -1.0, 0.0],
@@ -459,6 +462,7 @@ class ViewpointPlanner:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
+            print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
                 [[0.0, -1.0, 0.0, 0.0],
                  [0.0, 0.0, -1.0, 0.0],
@@ -525,6 +529,7 @@ class ViewpointPlanner:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
+            print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
                 [[0.0, -1.0, 0.0, 0.0],
                  [0.0, 0.0, -1.0, 0.0],
@@ -593,6 +598,7 @@ class ViewpointPlanner:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
         else:
+            print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
                 [[0.0, -1.0, 0.0, 0.0],
                  [0.0, 0.0, -1.0, 0.0],
