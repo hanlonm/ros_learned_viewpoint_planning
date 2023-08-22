@@ -129,7 +129,7 @@ class ViewpointPlanner:
 
         if self.mode == PlannerModes.TRF_CLF:
             # TODO: add case for occlusion
-            self.transformer = PCTViewpointTransformer.load_from_checkpoint("/TRF_CLF/best_test_10-5_16_occ_opt_norm_small_heatmaps.ckpt",
+            self.transformer = PCTViewpointTransformer.load_from_checkpoint(self.model_dir + "/TRF_CLF/best_test_10-5_16_occ_opt_norm_small_heatmaps.ckpt",
                                                                             dino_dim=0,
                                                                             im_width=self.camera.width,
                                                                             im_height=self.camera.height)
@@ -139,7 +139,7 @@ class ViewpointPlanner:
     def change_mode(self, new_mode):
         self.mode = PlannerModes(new_mode)
         if self.mode == PlannerModes.TRF_CLF and self.transformer is None:
-            self.transformer = PCTViewpointTransformer.load_from_checkpoint("/TRF_CLF/best_test_10-5_16_occ_opt_norm_small_heatmaps.ckpt",
+            self.transformer = PCTViewpointTransformer.load_from_checkpoint(self.model_dir + "/TRF_CLF/best_test_10-5_16_occ_opt_norm_small_heatmaps.ckpt",
                                                                             dino_dim=0,
                                                                             im_width=self.camera.width,
                                                                             im_height=self.camera.height)
