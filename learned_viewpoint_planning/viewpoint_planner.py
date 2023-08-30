@@ -19,6 +19,11 @@ from viewpoint_learning.learning.viewpoint_pct import PCTViewpointTransformer
 from viewpoint_learning.learning.utils import pre_process
 
 
+from sensor_msgs.msg import PointCloud2, PointField
+from std_msgs.msg import ColorRGBA, Header, Bool
+
+
+
 DEG_TO_RAD = np.pi / 180
 
 
@@ -34,6 +39,7 @@ class PlannerModes(Enum):
 
 class ViewpointPlanner:
     def __init__(self,
+                 pc_publisher,
                  mode=PlannerModes.MLP_CLF,
                  occlusion: bool = False,
                  num_samples: int = 100,
@@ -46,7 +52,8 @@ class ViewpointPlanner:
                  min_max_viewing_angles: np.ndarray = None,
                  min_max_viewing_distances: np.ndarray = None,
                  ) -> None:
-
+        
+        self.pc_publisher = pc_publisher
         ### Planner Parameters ###
         self.mode = mode
         self.occlusion = occlusion
@@ -238,11 +245,14 @@ class ViewpointPlanner:
             if visible_points.shape[0] > max_seen_landmarks:
                 max_seen_landmarks = visible_points.shape[0]
                 best_viewpoint = viewpoint
+                best_visible_points = visible_points
 
         if best_viewpoint is not None:
             print(f"Found viewpoint with score {max_seen_landmarks}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
+            pointcloud_msg = self.point_cloud(points=best_visible_points[:,:-1], parent_frame="map")
+            self.pc_publisher.publish(pointcloud_msg)
         else:
             print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
@@ -281,6 +291,7 @@ class ViewpointPlanner:
             T_cam_base = pt.transform_from(rot_x.as_matrix(), np.zeros(
                 3, )) @ pt.transform_from(rot_y.as_matrix(), np.zeros(
                     3, )) @ T_cam_base
+            
 
             viewpoint = Viewpoint(camera=self.camera,
                                   T_base_map=T_base_map,
@@ -294,14 +305,20 @@ class ViewpointPlanner:
             else:
                 visible_points = viewpoint.visible_points(
                     point_cloud=self.pcd_points_hom.copy(), clip_dist=5.0)
+                
+                # pointcloud_msg = self.point_cloud(points=visible_points[:,:-1], parent_frame="map")
+                # self.pc_publisher.publish(pointcloud_msg)
             if visible_points.shape[0] > max_seen_landmarks:
                 max_seen_landmarks = visible_points.shape[0]
                 best_viewpoint = viewpoint
+                best_visible_points = visible_points
 
         if best_viewpoint is not None:
             print(f"Found viewpoint with score {max_seen_landmarks}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
+            pointcloud_msg = self.point_cloud(points=best_visible_points[:,:-1], parent_frame="map")
+            self.pc_publisher.publish(pointcloud_msg)
         else:
             print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
@@ -354,10 +371,14 @@ class ViewpointPlanner:
                 best_viewpoint = viewpoint
                 self.prev_rotation = rot_y
                 max_fisher_info = fisher_info
+                best_visible_points = best_viewpoint.visible_points(point_cloud=self.pcd_points_hom.copy(), clip_dist=5.0)
 
         if best_viewpoint is not None:
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
+            pointcloud_msg = self.point_cloud(points=best_visible_points[:,:-1], parent_frame="map")
+            self.pc_publisher.publish(pointcloud_msg)
+            
         else:
             print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
@@ -459,10 +480,15 @@ class ViewpointPlanner:
         best_idx = np.argmax(scores)
         best_viewpoint = viewpoints[best_idx]
 
+
         if best_viewpoint is not None:
+            
             print(f"Found viewpoint with score {scores[best_idx]}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
+            best_visible_points = best_viewpoint.visible_points(point_cloud=self.pcd_points_hom.copy(), clip_dist=5.0)
+            pointcloud_msg = self.point_cloud(points=best_visible_points[:,:-1], parent_frame="map")
+            self.pc_publisher.publish(pointcloud_msg)
         else:
             print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
@@ -593,12 +619,15 @@ class ViewpointPlanner:
 
             if score > max_score:
                 best_viewpoint = viewpoint
+                best_visible_points = viewpoint.visible_points(point_cloud=self.pcd_points_hom.copy(), clip_dist=5.0)
                 max_score = float(score)
 
         if best_viewpoint is not None:
             print(f"Found viewpoint with score {score}")
             result_dict["T_cam_map"] = best_viewpoint.T_cam_map
             result_dict["T_cam_base"] = best_viewpoint.T_cam_base
+            pointcloud_msg = self.point_cloud(points=best_visible_points[:,:-1], parent_frame="map")
+            self.pc_publisher.publish(pointcloud_msg)
         else:
             print("WARNING NO VIEWPOINT FOUND")
             T_cam_base = np.array(
@@ -613,3 +642,37 @@ class ViewpointPlanner:
             result_dict["T_cam_base"] = viewpoint.T_cam_base
 
         return result_dict
+    
+
+    def point_cloud(self, points, parent_frame):
+        """ Creates a point cloud message.
+        Args:
+            points: Nx3 array of xyz positions.
+            parent_frame: frame in which the point cloud is defined
+        Returns:
+            sensor_msgs/PointCloud2 message
+        Code source:
+            https://gist.github.com/pgorczak/5c717baa44479fa064eb8d33ea4587e0
+        """
+        ros_dtype = PointField.FLOAT32
+        dtype = np.float32
+        itemsize = np.dtype(dtype).itemsize  # A 32-bit float takes 4 bytes.
+
+        data = points.astype(dtype).tobytes()
+        fields = [PointField(
+            name=n, offset=i * itemsize, datatype=ros_dtype, count=1)
+            for i, n in enumerate('xyz')]
+        header = Header(frame_id=parent_frame)
+
+        return PointCloud2(
+            header=header,
+            height=1,
+            width=points.shape[0],
+            is_dense=False,
+            is_bigendian=False,
+            fields=fields,
+            # Every point consists of three float32s.
+            point_step=(itemsize * 3),
+            row_step=(itemsize * 3 * points.shape[0]),
+            data=data
+        )

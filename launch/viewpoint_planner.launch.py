@@ -10,7 +10,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='map_name',
-            default_value="map-DLAB_5"
+            default_value="map-DLAB_6"
         ),
         launch.actions.DeclareLaunchArgument(
             name='cam_string',

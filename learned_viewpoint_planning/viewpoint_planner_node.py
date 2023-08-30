@@ -11,9 +11,11 @@ import pycolmap
 import trimesh
 from pathlib import Path
 import pickle
-
+from sensor_msgs.msg import PointCloud2, PointField
 from viewpoint_planner import ViewpointPlanner, PlannerModes
 from viewpoint_planning.viewpoint import Camera
+from std_msgs.msg import ColorRGBA, Header, Bool
+
 
 
 from rclpy.parameter import Parameter
@@ -62,6 +64,7 @@ class ViewpointPlanningNode(Node):
         self.plan_single_pose_sub = self.create_subscription(TransformStamped, "plan_viewpoint", self.plan_viewpoint_callback, 10)
         self.viewpoint_result_map_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_map", 10)
         self.viewpoint_result_loc_cam_pub = self.create_publisher(PoseStamped, "plan_viewpoint_result_loc_cam", 10)
+        self.planner_loc_pub = self.create_publisher(PoseStamped, "planner_loc", 10)
         self.mode_sub = self.create_subscription(String, "planner_mode", self.planner_mode_callback, 10)
         
         
@@ -89,6 +92,17 @@ class ViewpointPlanningNode(Node):
         ) + f"/Hierarchical-Localization/outputs/{environment}/reconstruction"
 
         reconstruction = pycolmap.Reconstruction(reconstruction_dir)
+
+        self.pc_publisher = self.create_publisher(PointCloud2, 'planning_pc', 10)
+
+        self.landmark_list = list(reconstruction.points3D.keys())
+        self.pcd_points = np.zeros((len(self.landmark_list), 3))
+         
+        for idx, landmark in enumerate(self.landmark_list):
+            self.pcd_points[idx] = np.array(
+                reconstruction.points3D[landmark].xyz)
+        self.pointcloud_msg = self.point_cloud(points=self.pcd_points, parent_frame="map")
+        self.pc_publisher.publish(self.pointcloud_msg)
         
         if occlusion:
             scene: trimesh.Trimesh = trimesh.load(
@@ -120,6 +134,7 @@ class ViewpointPlanningNode(Node):
         planner_mode = PlannerModes(mode_string)
 
         self.planner = ViewpointPlanner(
+            pc_publisher = self.pc_publisher,
             mode=planner_mode,
             occlusion=occlusion,
             num_samples=num_viewpoint_samples,
@@ -141,6 +156,39 @@ class ViewpointPlanningNode(Node):
         timer_period = 0.5
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
+    def point_cloud(self, points, parent_frame):
+        """ Creates a point cloud message.
+        Args:
+            points: Nx3 array of xyz positions.
+            parent_frame: frame in which the point cloud is defined
+        Returns:
+            sensor_msgs/PointCloud2 message
+        Code source:
+            https://gist.github.com/pgorczak/5c717baa44479fa064eb8d33ea4587e0
+        """
+        ros_dtype = PointField.FLOAT32
+        dtype = np.float32
+        itemsize = np.dtype(dtype).itemsize  # A 32-bit float takes 4 bytes.
+
+        data = points.astype(dtype).tobytes()
+        fields = [PointField(
+            name=n, offset=i * itemsize, datatype=ros_dtype, count=1)
+            for i, n in enumerate('xyz')]
+        header = Header(frame_id=parent_frame)
+
+        return PointCloud2(
+            header=header,
+            height=1,
+            width=points.shape[0],
+            is_dense=False,
+            is_bigendian=False,
+            fields=fields,
+            # Every point consists of three float32s.
+            point_step=(itemsize * 3),
+            row_step=(itemsize * 3 * points.shape[0]),
+            data=data
+        )
+
     def timer_callback(self):
         msg = String()
         msg.data = self.planner.mode.value
@@ -161,14 +209,33 @@ class ViewpointPlanningNode(Node):
         ])
         print(translation)
 
+        planner_pose = PoseStamped()
+        planner_pose.header.frame_id = "map"
+        planner_pose.header.stamp = self.get_clock().now().to_msg()
+
+        planner_pose.pose.position.x = msg.transform.translation.x
+        planner_pose.pose.position.y = msg.transform.translation.y
+        planner_pose.pose.position.z = msg.transform.translation.z
+
+        planner_pose.pose.orientation.x = msg.transform.rotation.x
+        planner_pose.pose.orientation.y = msg.transform.rotation.y
+        planner_pose.pose.orientation.z = msg.transform.rotation.z
+        planner_pose.pose.orientation.w = msg.transform.rotation.w
+
+        self.planner_loc_pub.publish(planner_pose)
+
+
         pq = np.concatenate([translation, rotation])
-        transformation_matrix = pt.transform_from_pq(pq)
+        transformation_matrix = pt.invert_transform(pt.transform_from_pq(pq))
         planning_poses = [transformation_matrix]
 
         viewpoint_dict = self.planner.plan_viewpoints(planning_poses)
 
         viewpoint_poses_map = []
         viewpoint_poses_base = []
+
+        viewpoint_poses_map_d = []
+        viewpoint_poses_base_d = []
 
         for result in viewpoint_dict.keys():
             T_cam_map = viewpoint_dict[result]["T_cam_map"]
@@ -179,10 +246,18 @@ class ViewpointPlanningNode(Node):
 
             viewpoint_poses_map.append(self.transform_to_pose_stamped(T_map_cam, "map"))
             viewpoint_poses_base.append(self.transform_to_pose_stamped(T_base_cam, "hand"))
+
+            viewpoint_poses_map_d.append(self.transform_to_pose(T_map_cam))
+            viewpoint_poses_base_d.append(self.transform_to_pose(T_base_cam))
             # print(pt.pq_from_transform(T_base_cam))
             # print(pr.euler_from_quaternion(pt.pq_from_transform(T_base_cam)[3:], 2,1,0, False))
         self.viewpoint_result_map_pub.publish(viewpoint_poses_map[0])
         self.viewpoint_result_loc_cam_pub.publish(viewpoint_poses_base[0])
+
+        result_pose_array_map = self.create_pose_array(viewpoint_poses_map_d)
+        result_pose_array_base = self.create_pose_array(viewpoint_poses_base_d)
+        self.result_pose_publisher_map.publish(result_pose_array_map)
+        self.result_pose_publisher_base.publish(result_pose_array_base)
 
     def plan_poses_callback(self, msg):
         # Convert each pose in the received request to a 4x4 transformation matrix
