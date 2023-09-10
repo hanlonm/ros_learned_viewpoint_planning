@@ -25,8 +25,6 @@ setup(
     entry_points={
         'console_scripts': [
             'viewpoint_planner = learned_viewpoint_planning.viewpoint_planner_node:main',
-            'pose_publisher = learned_viewpoint_planning.pose_publisher_node:main',
-            'spot_viewpoint_planning = learned_viewpoint_planning.spot_viewpoint_planning_node:main'
         ],
     },
 )
